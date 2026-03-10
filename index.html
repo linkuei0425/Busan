@@ -299,7 +299,7 @@
         </div>
     </div>
 
-    <!-- Toast Notification (取代原本的 alert) -->
+    <!-- Toast Notification -->
     <div id="toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-xl shadow-2xl z-[100] transition-all duration-300 opacity-0 hidden text-sm font-bold flex items-center gap-2 whitespace-nowrap">
         <i class="ph-fill ph-info text-blue-400 text-lg"></i>
         <span id="toast-msg"></span>
@@ -313,17 +313,13 @@ window.currentAttrCatIdx = -1;
 window.openModal = id => { const el = document.getElementById(id); el.classList.remove('hidden'); setTimeout(() => el.classList.remove('opacity-0'), 10); };
 window.closeModal = id => { const el = document.getElementById(id); el.classList.add('opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); };
 
-// Custom Toast 提示取代瀏覽器 alert
 window.showToast = (msg) => {
     const t = document.getElementById('toast');
     document.getElementById('toast-msg').textContent = msg;
     t.classList.remove('hidden');
-    // 觸發重繪以確保轉場動畫執行
     void t.offsetWidth;
     t.classList.remove('opacity-0');
     t.classList.add('translate-y-2');
-    
-    // 3 秒後自動隱藏
     setTimeout(() => {
         t.classList.add('opacity-0');
         t.classList.remove('translate-y-2');
@@ -383,30 +379,40 @@ const busLinesDataLocal = [
         "[403] 壽安 (Suan)：東萊邑城歷史館。"
     ] },
     { line: "🚆 東海線 (電鐵)", items: [
-        "[K110] 釜田 (Bujeon)：可步行轉乘 1 號線、釜田市場。",
-        "[K121] 奧西利亞 (OSIRIA)：釜山樂天世界、樂天 Outlet、海東龍宮寺。",
-        "[K122] 機場 (Gijang)：機張市場(螃蟹)。"
+        "[K110] 釜田 (Bujeon) —轉乘釜山地鐵 1 號線 [120] 及一般火車",
+        "[K112] 巨堤 (Geoje) —轉乘釜山地鐵 3 號線 [306]",
+        "[K113] 教大 (Busan Nat'l Univ. of Edu.) —— 可轉乘釜山地鐵 1 號線 [124]",
+        "[K119] BEXCO — 可轉乘釜山地鐵 2 號線 [205]",
+        "[K120] 新海雲臺 (Sinhaeundae) — 可轉乘一般火車",
+        "[K122] 奧西利亞 (OSIRIA) — 往樂天世界、海東龍宮寺",
+        "[K123] 機張 (Gijang) — 往機張市場吃海鮮",
+        "[K132] 太和江 (Taehwagang) —終點站，往蔚山市區"
     ] },
     { line: "🟣 釜山—金海輕軌", items: [
-        "[4] 機場 (Airport)：金海國際機場。",
-        "[17] 首露王陵 (Royal Tomb of King Suro)：金海文化遺產。"
+        "[BGL1] 沙上 (Sasang) — 轉乘釜山地鐵 2 號線、京釜線",
+        "[BGL4] 機場 (Gimhae International Airport) — 金海國際機場",
+        "[BGL7] 大渚 (Daejeo) — 可轉乘釜山地鐵 3 號線"
     ] }
 ];
 
 const codeToNameLocal = {};
-busLinesDataLocal.forEach(line => line.items.forEach(i => { codeToNameLocal[i.split(' ')[0]] = i; }));
+busLinesDataLocal.forEach(line => line.items.forEach(i => { 
+    let code = i.split(']')[0] + ']'; // 精準擷取 [代碼]
+    codeToNameLocal[code] = i; 
+}));
 
-// 補足未列在觀光選單中的隱藏轉乘站點名稱，解決轉乘時只顯示代碼的問題
 Object.assign(codeToNameLocal, {
     "[305]": "[305] 蓮山 (Yeonsan)",
     "[K113]": "[K113] 教大 (Busan Nat'l Univ. of Edu.)",
     "[402]": "[402] 東萊 (Dongnae)",
-    "[K118]": "[K118] BEXCO",
+    "[K119]": "[K119] BEXCO",
     "[301]": "[301] 水營 (Suyeong)",
-    "[1]": "[1] 沙上 (Sasang)",
+    "[BGL1]": "[BGL1] 沙上 (Sasang)",
     "[313]": "[313] 德川 (Deokcheon)",
     "[401]": "[401] 美南 (Minam)",
-    "[21]": "[21] 大渚 (Daejeo)"
+    "[BGL7]": "[BGL7] 大渚 (Daejeo)",
+    "[120]": "[120] 釜田 (Bujeon)",
+    "[306]": "[306] 巨堤 (Geoje)"
 });
 
 // --- Graph Logic (真實站距邏輯) ---
@@ -423,27 +429,29 @@ const buildBusGraphLocal = () => {
     addPath(201, 243, "", "地鐵 2 號線");
     addPath(301, 317, "", "地鐵 3 號線");
     addPath(401, 414, "", "地鐵 4 號線");
-    // 東海線
-    for(let i=110; i<122; i++) {
+    for(let i=110; i<132; i++) {
         edges.push({ u:`[K${i}]`, v:`[K${i+1}]`, line:"東海線", type:"travel"});
         edges.push({ u:`[K${i+1}]`, v:`[K${i}]`, line:"東海線", type:"travel"});
     }
-    // 輕軌
-    addPath(1, 21, "", "金海輕軌");
+    addPath(1, 22, "BGL", "金海輕軌");
 
-    const addTransfer = (u, v) => { edges.push({u, v, line:"站內轉乘", type:"transfer"}); edges.push({v, u, line:"站內轉乘", type:"transfer"}); };
+    const addTransfer = (u, v) => { 
+        edges.push({u: u, v: v, line:"站內轉乘", type:"transfer"}); 
+        edges.push({u: v, v: u, line:"站內轉乘", type:"transfer"}); 
+    };
     
-    // 轉乘節點定義
     addTransfer("[119]", "[219]"); // 西面
     addTransfer("[123]", "[305]"); // 蓮山
     addTransfer("[124]", "[K113]"); // 教大
     addTransfer("[125]", "[402]"); // 東萊
-    addTransfer("[205]", "[K118]"); // BEXCO
+    addTransfer("[205]", "[K119]"); // BEXCO
     addTransfer("[208]", "[301]"); // 水營
-    addTransfer("[227]", "[1]");   // 沙上
+    addTransfer("[227]", "[BGL1]");   // 沙上
     addTransfer("[233]", "[313]"); // 德川
     addTransfer("[309]", "[401]"); // 美南
-    addTransfer("[317]", "[21]");  // 大渚
+    addTransfer("[317]", "[BGL7]");   // 大渚
+    addTransfer("[120]", "[K110]"); // 釜田
+    addTransfer("[306]", "[K112]"); // 巨堤
 
     const graph = {};
     edges.forEach(e => { if(!graph[e.u]) graph[e.u]=[]; graph[e.u].push({node:e.v, line:e.line, type:e.type}); });
@@ -469,121 +477,162 @@ const bfsEdgeTrack = (g, s, e) => {
 };
 
 window.calcMrt = () => {
-    const o = document.getElementById('mrt-origin').value, d = document.getElementById('mrt-dest').value;
-    if (!o || !d) { window.showToast('請選擇出發站與目的站'); return; }
-    const res = document.getElementById('mrt-result'); res.classList.remove('hidden');
-    const result = bfsEdgeTrack(mrtGraphLocal, o, d);
-    if (!result) return;
+    try {
+        const o = document.getElementById('mrt-origin').value;
+        const d = document.getElementById('mrt-dest').value;
+        if (!o || !d) { window.showToast('請選擇出發站與目的站'); return; }
+        
+        const result = bfsEdgeTrack(mrtGraphLocal, o, d);
+        if (!result) { window.showToast('無法找到路線，請確認連通性'); return; }
 
-    let segments = [];
-    let currentSegment = null;
-    result.edges.forEach((edge, i) => {
-        if(edge.type === 'transfer') {
-            if(currentSegment) segments.push(currentSegment);
-            segments.push({ line: '站內轉乘', isTransfer: true, node: edge.node });
-            currentSegment = null;
-        } else {
-            if(!currentSegment || currentSegment.line !== edge.line) {
+        const res = document.getElementById('mrt-result'); 
+        res.classList.remove('hidden');
+
+        let segments = [];
+        let currentSegment = null;
+        result.edges.forEach((edge, i) => {
+            if(edge.type === 'transfer') {
                 if(currentSegment) segments.push(currentSegment);
-                currentSegment = { line: edge.line, start: result.path[i], end: edge.node, stops: 1 };
+                segments.push({ line: '站內轉乘', isTransfer: true, node: edge.node });
+                currentSegment = null;
             } else {
-                currentSegment.end = edge.node; currentSegment.stops++;
+                if(!currentSegment || currentSegment.line !== edge.line) {
+                    if(currentSegment) segments.push(currentSegment);
+                    currentSegment = { line: edge.line, start: result.path[i], end: edge.node, stops: 1 };
+                } else {
+                    currentSegment.end = edge.node; currentSegment.stops++;
+                }
             }
-        }
-    });
-    if(currentSegment) segments.push(currentSegment);
+        });
+        if(currentSegment) segments.push(currentSegment);
 
-    const totalStops = segments.reduce((s, seg) => s + (seg.stops || 0), 0);
-    
-    // 將 cleanName 函數往前提，以便在計算免轉乘標籤時可以使用
-    const cleanName = (code) => {
-        let name = codeToNameLocal[code] || code;
-        return name.split('：')[0].replace('。', '');
-    };
+        const totalStops = segments.reduce((s, seg) => s + (seg.stops || 0), 0);
+        
+        const cleanName = (code) => {
+            if (!code) return "";
+            let name = codeToNameLocal[code] || code;
+            return name.split(/：|—/)[0].replace('。', '').trim();
+        };
 
-    // 檢查是否有轉乘，若無則加上直達免轉乘的標籤 (排除終點剛好是轉乘站的無效轉乘)
-    const actualTransfers = segments.filter(seg => seg.isTransfer && cleanName(seg.node) !== cleanName(d));
-    const hasTransfer = actualTransfers.length > 0;
-    const transferBadge = hasTransfer ? '' : '<span class="ml-2 bg-green-500/20 text-green-400 border border-green-500/50 px-2 py-0.5 rounded text-[10px] align-middle inline-block -mt-1 shadow-sm">直達免轉乘</span>';
+        const actualTransfers = segments.filter(seg => seg.isTransfer && cleanName(seg.node) !== cleanName(d));
+        const hasTransfer = actualTransfers.length > 0;
+        const transferBadge = hasTransfer ? '' : '<span class="ml-2 bg-green-500/20 text-green-400 border border-green-500/50 px-2 py-0.5 rounded text-[10px] align-middle inline-block -mt-1 shadow-sm">直達免轉乘</span>';
 
-    document.getElementById('mrt-stops-count').innerHTML = `<span class="text-2xl">${totalStops}</span><span class="text-sm ml-1 text-gray-400">站</span>${transferBadge}`;
-    document.getElementById('mrt-time').textContent = `約 ${totalStops * 3 + 5} 分`;
-    
-    // 初始化 html 變數與路徑起點 UI
-    let html = `<div class="relative pl-6 border-l-2 border-gray-600 ml-3 space-y-5 mt-2 pb-2">`;
-    
-    // [節點] 起點
-    html += `
-        <div class="relative">
-            <div class="absolute -left-[33px] top-1 bg-gray-900 border-[3px] border-orange-500 w-4 h-4 rounded-full z-10"></div>
-            <p class="text-[10px] text-gray-400 font-bold mb-0.5">起點</p>
-            <p class="text-base font-bold text-white leading-none">${cleanName(o)}</p>
-        </div>
-    `;
-    
-    segments.forEach((seg, idx) => {
-        if(seg.isTransfer) {
-            // [新增判斷] 如果這個轉乘站剛好就是終點站，就不顯示「下車轉乘」，讓它直接接續最後的「終點」
-            if (cleanName(seg.node) === cleanName(d)) return;
+        document.getElementById('mrt-stops-count').innerHTML = `<span class="text-2xl">${totalStops}</span><span class="text-sm ml-1 text-gray-400">站</span>${transferBadge}`;
+        document.getElementById('mrt-time').textContent = `約 ${totalStops * 3 + 5} 分`;
+        
+        let html = `<div class="relative pl-6 border-l-2 border-gray-600 ml-3 space-y-5 mt-2 pb-2">`;
+        
+        html += `
+            <div class="relative">
+                <div class="absolute -left-[33px] top-1 bg-gray-900 border-[3px] border-orange-500 w-4 h-4 rounded-full z-10"></div>
+                <p class="text-[10px] text-gray-400 font-bold mb-0.5">起點</p>
+                <p class="text-base font-bold text-white leading-none">${cleanName(o)}</p>
+            </div>
+        `;
+        
+        segments.forEach((seg, idx) => {
+            if(seg.isTransfer) {
+                if (cleanName(seg.node) === cleanName(d)) return;
 
-            const getShortLine = (lineStr) => {
-                if(lineStr.includes("1 號線")) return "1號線";
-                if(lineStr.includes("2 號線")) return "2號線";
-                if(lineStr.includes("3 號線")) return "3號線";
-                if(lineStr.includes("4 號線")) return "4號線";
-                if(lineStr.includes("東海線")) return "東海線";
-                if(lineStr.includes("輕軌")) return "輕軌";
-                return lineStr;
-            };
-            
-            let fromLine = segments[idx-1] ? getShortLine(segments[idx-1].line) : "";
-            let toLine = segments[idx+1] ? getShortLine(segments[idx+1].line) : "";
+                const getShortLine = (lineStr) => {
+                    if(!lineStr) return "";
+                    if(lineStr.includes("1 號線")) return "1號線";
+                    if(lineStr.includes("2 號線")) return "2號線";
+                    if(lineStr.includes("3 號線")) return "3號線";
+                    if(lineStr.includes("4 號線")) return "4號線";
+                    if(lineStr.includes("東海線")) return "東海線";
+                    if(lineStr.includes("輕軌")) return "輕軌";
+                    return lineStr;
+                };
 
-            // [節點] 轉乘站
-            html += `
-                <div class="relative">
-                    <div class="absolute -left-[33px] top-1 bg-gray-900 border-[3px] border-rose-500 w-4 h-4 rounded-full z-10 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></div>
-                    <p class="text-[10px] text-rose-400 font-bold mb-0.5">下車轉乘 <span class="text-rose-200">(${fromLine}轉${toLine})</span></p>
-                    <p class="text-sm font-bold text-white leading-none">${cleanName(seg.node)}</p>
-                </div>
-            `;
-        } else {
-            // [路徑] 搭乘過程
-            let lineCol = "text-gray-300"; // 預設顏色
-            if(seg.line.includes("1 號線")) lineCol = "text-orange-400";
-            else if(seg.line.includes("2 號線")) lineCol = "text-green-400";
-            else if(seg.line.includes("3 號線")) lineCol = "text-yellow-600";
-            else if(seg.line.includes("4 號線")) lineCol = "text-blue-400";
-            else if(seg.line.includes("東海")) lineCol = "text-teal-400";
-            else if(seg.line.includes("輕軌")) lineCol = "text-purple-400";
+                const getLineFromNode = (code) => {
+                    if (!code) return "";
+                    if (code.includes("BGL")) return "輕軌";
+                    if (code.includes("K")) return "東海線";
+                    if (code.includes("[1")) return "1號線";
+                    if (code.includes("[2")) return "2號線";
+                    if (code.includes("[3")) return "3號線";
+                    if (code.includes("[4")) return "4號線";
+                    return "";
+                };
+                
+                let fromLine = (segments[idx-1] && segments[idx-1].line) ? getShortLine(segments[idx-1].line) : getLineFromNode(o);
+                let toLine = (segments[idx+1] && segments[idx+1].line) ? getShortLine(segments[idx+1].line) : getLineFromNode(d);
 
-            html += `
-                <div class="relative py-1">
-                    <div class="bg-gray-800/80 rounded-xl p-3 border border-gray-700 shadow-sm inline-block min-w-[140px]">
-                        <div class="flex items-center gap-3">
-                            <i class="ph-fill ph-train text-xl ${lineCol}"></i>
-                            <div>
-                                <p class="text-xs font-bold ${lineCol}">${seg.line}</p>
-                                <p class="text-[10px] text-gray-400 mt-0.5">搭乘 <span class="text-white font-bold">${seg.stops}</span> 站</p>
+                let isCrossSystem = false;
+                if (fromLine && toLine) {
+                    let fromIsSubway = fromLine.includes("號線");
+                    let toIsSubway = toLine.includes("號線");
+                    // 輕軌/電鐵與地鐵的跨系統轉乘
+                    if (fromIsSubway !== toIsSubway) {
+                        isCrossSystem = true;
+                    }
+                }
+
+                let isStartTransfer = (idx === 0);
+                let titleClass = isCrossSystem ? "text-yellow-400" : "text-rose-400";
+                let subClass = isCrossSystem ? "text-yellow-200" : "text-rose-200";
+                let dotClass = isCrossSystem ? "border-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]" : "border-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]";
+                
+                let titleText = "下車轉乘";
+                if (isCrossSystem && isStartTransfer) {
+                    titleText = "進站跨線轉乘 (需出站刷卡)";
+                } else if (isCrossSystem) {
+                    titleText = "跨線轉乘 (需出站刷卡)";
+                } else if (isStartTransfer) {
+                    titleText = "進站轉往";
+                }
+
+                let transferDesc = `(${fromLine || '未知'}轉${toLine || '未知'})`;
+
+                html += `
+                    <div class="relative">
+                        <div class="absolute -left-[33px] top-1 bg-gray-900 border-[3px] ${dotClass} w-4 h-4 rounded-full z-10"></div>
+                        <p class="text-[10px] ${titleClass} font-bold mb-0.5">${titleText} <span class="${subClass}">${transferDesc}</span></p>
+                        <p class="text-sm font-bold text-white leading-none">${cleanName(seg.node)}</p>
+                    </div>
+                `;
+            } else {
+                let lineCol = "text-gray-300";
+                if(seg.line && seg.line.includes("1 號線")) lineCol = "text-orange-400";
+                else if(seg.line && seg.line.includes("2 號線")) lineCol = "text-green-400";
+                else if(seg.line && seg.line.includes("3 號線")) lineCol = "text-yellow-600";
+                else if(seg.line && seg.line.includes("4 號線")) lineCol = "text-blue-400";
+                else if(seg.line && seg.line.includes("東海")) lineCol = "text-teal-400";
+                else if(seg.line && seg.line.includes("輕軌")) lineCol = "text-purple-400";
+
+                html += `
+                    <div class="relative py-1">
+                        <div class="bg-gray-800/80 rounded-xl p-3 border border-gray-700 shadow-sm inline-block min-w-[140px]">
+                            <div class="flex items-center gap-3">
+                                <i class="ph-fill ph-train text-xl ${lineCol}"></i>
+                                <div>
+                                    <p class="text-xs font-bold ${lineCol}">${seg.line || '未知路線'}</p>
+                                    <p class="text-[10px] text-gray-400 mt-0.5">搭乘 <span class="text-white font-bold">${seg.stops || 0}</span> 站</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
-        }
-    });
+                `;
+            }
+        });
 
-    // [節點] 終點
-    html += `
-        <div class="relative">
-            <div class="absolute -left-[33px] top-1 bg-gray-900 border-[3px] border-green-500 w-4 h-4 rounded-full z-10"></div>
-            <p class="text-[10px] text-gray-400 font-bold mb-0.5">終點</p>
-            <p class="text-base font-bold text-white leading-none">${cleanName(d)}</p>
-        </div>
-    `;
+        html += `
+            <div class="relative">
+                <div class="absolute -left-[33px] top-1 bg-gray-900 border-[3px] border-green-500 w-4 h-4 rounded-full z-10"></div>
+                <p class="text-[10px] text-gray-400 font-bold mb-0.5">終點</p>
+                <p class="text-base font-bold text-white leading-none">${cleanName(d)}</p>
+            </div>
+        `;
 
-    html += `</div>`;
-    document.getElementById('mrt-path-detail').innerHTML = html;
+        html += `</div>`;
+        document.getElementById('mrt-path-detail').innerHTML = html;
+        
+    } catch (error) {
+        console.error("Route Calculation Error: ", error);
+        window.showToast("路線計算發生錯誤，請重試");
+    }
 };
 
 // --- Boat/KTX City Transit Logic ---
@@ -795,21 +844,25 @@ const renderEssentials = () => {
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Init Subways & Cities
     const mo = document.getElementById('mrt-origin'), md = document.getElementById('mrt-dest');
-    busLinesDataLocal.forEach(g => { let opt = `<optgroup label="${g.line}">${g.items.map(i=>`<option value="${i.split(' ')[0]}">${i}</option>`).join('')}</optgroup>`; mo.innerHTML += opt; md.innerHTML += opt; });
+    busLinesDataLocal.forEach(g => { 
+        let opt = `<optgroup label="${g.line}">${g.items.map(i => {
+            let code = i.split(']')[0] + ']'; // 精準擷取 [代碼] 作為 value
+            return `<option value="${code}">${i}</option>`;
+        }).join('')}</optgroup>`; 
+        mo.innerHTML += opt; 
+        md.innerHTML += opt; 
+    });
     
     const bo = document.getElementById('boat-origin'), bd = document.getElementById('boat-dest');
     let cityOptions = cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     bo.innerHTML += cityOptions; bd.innerHTML += cityOptions;
 
-    // Time & Weather
     setInterval(() => {
         const now = new Date();
         document.getElementById('datetime-display').textContent = now.toLocaleString('zh-TW', { timeZone: 'Asia/Seoul', hour12: false }) + " (韓國時間)";
     }, 1000);
     
-    // 模擬天氣載入
     setTimeout(() => {
         document.getElementById('weather-display').innerHTML = '<i class="ph-fill ph-sun text-yellow-400 text-sm"></i> 晴天 18°C';
     }, 1500);
@@ -817,7 +870,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const track = document.getElementById('carousel-track'); let slide = 0;
     setInterval(() => { slide = (slide + 1) % 3; track.style.transform = `translateX(-${slide * 93}%)`; }, 3000);
 
-    // Initialize UI components
     renderAttrCategories();
     renderItin('day1');
     renderEssentials();
