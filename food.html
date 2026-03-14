@@ -32,6 +32,13 @@
         .btn-nav:hover {
             background-color: #1d4ed8;
         }
+        /* Naver Map Brand Color */
+        .btn-naver {
+            background-color: #03C75A; /* Naver 綠色 */
+        }
+        .btn-naver:hover {
+            background-color: #02b351;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -358,9 +365,15 @@
             }
 
             items.forEach((item, index) => {
-                // Generate Google Maps URL (Focus query on Busan)
-                const encodedQuery = encodeURIComponent(`${item.name} Busan ${item.address.split('/')[0]}`);
-                const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+                // 1. 產生 Google Maps 導航網址
+                const encodedGoogleQuery = encodeURIComponent(`${item.name} Busan ${item.address.split('/')[0]}`);
+                const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedGoogleQuery}`;
+
+                // 2. 產生 Naver Map 導航網址
+                // 為了提高 Naver Map 搜尋精準度，自動過濾並提取出「純韓文地址」（通常在左括號前）
+                const pureKoreanAddress = item.address.split('(')[0].trim();
+                const encodedNaverQuery = encodeURIComponent(pureKoreanAddress);
+                const naverMapsUrl = `https://map.naver.com/p/search/${encodedNaverQuery}`;
 
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col fade-in hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1";
@@ -382,12 +395,24 @@
                         </div>
                     </div>
                     
-                    <div class="px-6 pb-6 mt-auto">
-                        <a href="${mapsUrl}" target="_blank" class="w-full flex items-center justify-center gap-2 btn-nav text-white py-3 rounded-xl font-bold transition-colors shadow-sm hover:shadow-md">
+                    <div class="px-6 pb-6 mt-auto flex flex-col gap-2.5">
+                        <!-- Naver Map 按鈕 -->
+                        <a href="${naverMapsUrl}" target="_blank" class="w-full flex items-center justify-center gap-2 btn-naver text-white py-2.5 rounded-xl transition-colors shadow-sm hover:shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            <div class="flex flex-col items-start justify-center">
+                                <span class="font-bold text-[15px] leading-tight">Naver MAP 導航</span>
+                                <span class="text-[11px] font-normal opacity-90 leading-tight mt-0.5">需下載APP，韓國建議使用</span>
+                            </div>
+                        </a>
+                        
+                        <!-- Google Maps 按鈕 -->
+                        <a href="${googleMapsUrl}" target="_blank" class="w-full flex items-center justify-center gap-2 btn-nav text-white py-2.5 rounded-xl transition-colors shadow-sm hover:shadow-md">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd" />
                             </svg>
-                            開啟 Google Maps 導航
+                            <span class="font-bold text-[15px]">開啟 Google Maps 導航</span>
                         </a>
                     </div>
                 `;
